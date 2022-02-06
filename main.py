@@ -16,6 +16,8 @@ ch.setFormatter(ch_formatter)
 logger.addHandler(ch)
 
 FONT_DEFAULT = ("Segoe UI", 11)
+POLL_FREQUENCY = 500
+TRANSPARENCY = 1
 
 
 def main():
@@ -63,8 +65,8 @@ def main():
 
     mem_frame = gui.Frame("Memory", font=FONT_DEFAULT, layout=[
         [gui.Text(
-            f"RAM Capacity: {round(ram_amount/1024/1024/1024, 1)}GB", font=FONT_DEFAULT)],
-        [gui.Table([[f"{round(ram_used/1024/1024/1024, 1)}GB", f"{round(ram_free/1024/1024/1024, 1)}GB", f"{ram_used_percent}%"]], headings=["Used", "Available",
+            f"RAM Capacity: {convert_bytes_to_giga_bytes(ram_amount)}GB", font=FONT_DEFAULT)],
+        [gui.Table([[f"{convert_bytes_to_giga_bytes(ram_used)}GB", f"{convert_bytes_to_giga_bytes(ram_free)}GB", f"{ram_used_percent}%"]], headings=["Used", "Available",
                    "Percent"], num_rows=1, text_color="#000000", background_color="#ffffff", key="-ram_status-", font=FONT_DEFAULT)]
     ])
 
@@ -72,6 +74,7 @@ def main():
         [os_frame],
         [cpu_frame],
         [mem_frame],
+        [gui.Button("Exit", key="-Exit-")]
     ]
 
     show_window(layout)
@@ -89,21 +92,31 @@ def update_per_cpu_percent():
 
 
 def update_memory_status():
-    return [[f"{round(ps.virtual_memory().used/1024/1024/1024, 1)}GB",
-             f"{round(ps.virtual_memory().available/1024/1024/1024, 1)}GB", f"{ps.virtual_memory().percent}%"]]
+    return [[f"{convert_bytes_to_giga_bytes(ps.virtual_memory().used)}GB",
+             f"{convert_bytes_to_giga_bytes(ps.virtual_memory().available)}GB", f"{ps.virtual_memory().percent}%"]]
+
+
+def convert_bytes_to_giga_bytes(bytes):
+    return round(bytes/1024/1024/1024, 1)
 
 
 def show_window(layout):
     thread_pool = ThreadPoolExecutor(max_workers=10)  # make thread pool
 
     try:
-        window = gui.Window("PC STATUS CHECKER", layout)
+        window = gui.Window("PC STATUS CHECKER", layout,
+                            alpha_channel=TRANSPARENCY,
+                            margins=(5, 5),
+                            element_padding=(0, 0),
+                            border_depth=0,
+                            finalize=True)
         while True:
-            e, v = window.read(timeout=100, timeout_key='-UPDATE-')
-            logger.debug(f"{e=} | {v=}")  # for debug
-            if e == gui.WIN_CLOSED or e == None:
+            event, values = window.read(
+                timeout=POLL_FREQUENCY, timeout_key='-UPDATE-')
+            logger.debug(f"{event=} | {values=}")  # for debug
+            if event == gui.WIN_CLOSED or event in (None, "-Exit-"):
                 break
-            elif e in "-UPDATE-":
+            elif event in "-UPDATE-":
                 # UPDATE STATUS
                 future_memory_status = thread_pool.submit(update_memory_status)
                 future_all_cpu_status = thread_pool.submit(
