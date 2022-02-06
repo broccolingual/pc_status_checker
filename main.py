@@ -1,10 +1,19 @@
-from email.policy import default
-import platform as pl
 from concurrent.futures import ThreadPoolExecutor
+from logging import getLogger, Formatter, StreamHandler, DEBUG, INFO, WARNING, ERROR, CRITICAL
+import platform as pl
 
 import cpuid
 import psutil as ps
 import PySimpleGUI as gui
+
+logger = getLogger(__name__)
+logger.setLevel(DEBUG)
+ch = StreamHandler()
+ch.setLevel(DEBUG)
+ch_formatter = Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(ch_formatter)
+logger.addHandler(ch)
 
 FONT_DEFAULT = ("Segoe UI", 11)
 
@@ -91,7 +100,7 @@ def show_window(layout):
         window = gui.Window("PC STATUS CHECKER", layout)
         while True:
             e, v = window.read(timeout=100, timeout_key='-UPDATE-')
-            print(f"{e=} | {v=}")  # for debug
+            logger.debug(f"{e=} | {v=}")  # for debug
             if e == gui.WIN_CLOSED or e == None:
                 break
             elif e in "-UPDATE-":
